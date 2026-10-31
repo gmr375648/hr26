@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSC ২০২৫ রেজাল্ট</title>
+    
+    <!-- PDF.js লাইব্রেরি -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Hind Siliguri', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            text-align: center;
+            width: 100%;
+            max-width: 450px;
+        }
+        h2 { color: #333; margin-bottom: 10px; font-size: 24px; }
+        p { color: #666; margin-bottom: 20px; font-size: 15px; }
+
+        input[type="text"] {
+            width: 80%;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 22px;
+            text-align: center;
+            letter-spacing: 3px;
+            font-weight: bold;
+            outline: none;
+            transition: 0.3s;
+        }
+        input[type="text"]:focus { border-color: #667eea; }
+        
+        .search-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            width: 90%;
+        }
+        .search-btn:hover { background: #5a67d8; transform: translateY(-2px); }
+        .search-btn:disabled { background: #a0aec0; cursor: not-allowed; transform: none; }
+        
+        .result-box {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 12px;
+            display: none;
+            text-align: left;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .success { background: #f0fdf4; border: 2px solid #bbf7d0; }
+        .error { background: #fef2f2; border: 2px solid #fecaca; color: #b91c1c; text-align: center; }
+        
+        .college { font-weight: 700; color: #1f2937; font-size: 16px; margin-bottom: 5px; }
+        .gpa { font-size: 32px; font-weight: 700; color: #10b981; text-align: center; margin: 10px 0; }
+        .fail { font-size: 24px; font-weight: 700; color: #ef4444; text-align: center; margin: 10px 0; }
+        .roll-info { background: #e5e7eb; padding: 8px 12px; border-radius: 8px; display: inline-block; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🎓 HSC ২০২৫ ফলাফল</h2>
+    
+    <input type="text" id="rollInput" placeholder="120145" maxlength="6" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+    <br>
+    <button class="search-btn" id="searchBtn" onclick="checkResult()">রেজাল্ট দেখুন</button>
+
+    <div id="resultBox" class="result-box"></div>
+</div>
+
+<script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // 📌 এখানে আপনার PDF ফাইলের নাম দিন (যেহেতু index.html এর পাশেই রাখবেন, তাই শুধু নাম দিলেই হবে)
+    // ফাইলের নাম হুবহু যা আছে, তাই লিখুন (যেমন: "128676.pdf")
+    const COLLEGES = [
+        { code: "128672", pdfName: "128672.pdf", name: "SALAP COLLEGE, ULLAPARA, SIRAJGANJ" },
+        { code: "128673", pdfName: "128673.pdf", name: "PRINCIPAL ABUL HOSSAIN COLLEGE, ULLAPARA, SIRAJGANJ" },
+        { code: "128674", pdfName: "128674.pdf", name: "ULLAPARA SCIENCE COLLEGE, ULLAPARA, SIRAJGANJ" },
+        { code: "128675", pdfName: "128675.pdf", name: "H.T. IMAM DEGREE COLLEGE, ULLAPARA, SIRAJGANJ" },
+        { code: "128676", pdfName: "128676.pdf", name: "AKBAR ALI GOVT. COLLEGE, ULLAPARA, SIRAJGANJ" }
+    ];
+
+    // ফাইল লোড করার ফাংশন
+    async function extractTextFromPdf(pdfUrl) {
+        try {
+            const loadingTask = pdfjsLib.getDocument(pdfUrl);
+            const pdf = await loadingTask.promise;
+            let fullText = "";
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(" ");
+                fullText += pageText + "\n";
+            }
+            return fullText;
+        } catch (error) {
+            console.error("PDF Error: " + pdfUrl, error);
+            return null;
+        }
+    }
+
+    async function checkResult() {
+        const roll = document.getElementById('rollInput').value.trim();
+        const resultBox = document.getElementById('resultBox');
+        const searchBtn = document.getElementById('searchBtn');
+
+        if (roll.length !== 6) {
+            resultBox.style.display = 'block';
+            resultBox.className = 'result-box error';
+            resultBox.innerHTML = '⚠️ সঠিক ৬ সংখ্যার রোল নম্বর দিন।';
+            return;
+        }
+
+        resultBox.style.display = 'block';
+        resultBox.className = 'result-box';
+        resultBox.innerHTML = '<p style="text-align:center;">⏳ রেজাল্ট খোঁজা হচ্ছে... (একটু সময় লাগতে পারে)</p>';
+        searchBtn.disabled = true;
+
+        let found = false;
+        let resultData = null;
+
+        // এখানে লুপ চালিয়ে সব PDF-এ খোঁজা হবে
+        for (let college of COLLEGES) {
+            const text = await extractTextFromPdf(college.pdfName);
+            
+            if (!text) continue; 
+
+            const regex = new RegExp(roll + "\\s*\\[([^\\]]+)\\]");
+            const match = text.match(regex);
+
+            if (match) {
+                found = true;
+                resultData = {
+                    roll: roll,
+                    value: match[1].trim(),
+                    college: college.name
+                };
+                break;
+            }
+        }
+
+        searchBtn.disabled = false;
+
+        if (found && resultData) {
+            let statusHtml = '';
+            const value = resultData.value;
+            
+            if (!isNaN(value)) {
+                statusHtml = `<div class="gpa">GPA: ${value}</div><p style="text-align:center; color:#10b981; font-weight:bold;">✅ উত্তীর্ণ</p>`;
+            } else {
+                let statusText = value;
+                if (value === 'ABS.') statusText = 'অনুপস্থিত (ABS.)';
+                if (value === 'FAIL') statusText = 'অকৃতকার্য (FAIL)';
+                statusHtml = `<div class="fail">${statusText}</div><p style="text-align:center; color:#ef4444;">ℹ️ এই রোলের জন্য GPA প্রকাশিত নেই</p>`;
+            }
+
+            resultBox.className = 'result-box success';
+            resultBox.innerHTML = `
+                <div class="college">🏫 ${resultData.college}</div>
+                <div style="text-align:center; margin-top:15px;">
+                    <span class="roll-info">🆔 রোল: ${resultData.roll}</span>
+                </div>
+                ${statusHtml}
+            `;
+        } else {
+            resultBox.className = 'result-box error';
+            resultBox.innerHTML = '❌ এই রোল নম্বরটি কোনো কলেজের রেজাল্টে পাওয়া যায়নি।';
+        }
+    }
+</script>
+
+</body>
+</html>
